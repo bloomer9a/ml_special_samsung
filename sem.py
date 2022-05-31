@@ -24,8 +24,7 @@ class SEMDepthDataset(Dataset):
         if self.transforms:
             sem = self.random_flip(sem) # changed
             #sem = self.augmentation(sem)
-            sem = sem.squeeze() # added
-            depth = depth.squeeze() # added
+
         return sem, depth
 
     def __len__(self):
