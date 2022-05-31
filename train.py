@@ -15,7 +15,7 @@ from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
 from sem import SEMDepthDataset
-from utils import calculate_rmse, prepare_training
+from utils import calculate_rmse, prepare_training, save_checkpoint
 
 
 def main(config):
@@ -52,7 +52,7 @@ def main_worker(gpu, ngpus_per_node, config):
     if config.gpu is not None:
         print("Use GPU: {} for training".format(config.gpu))
     if config.distributed:
-        if config.dist_url == "env://" and config.ddp.rank == -1:
+        if config.ddp.dist_url == "env://" and config.ddp.rank == -1:
             config.ddp.rank = int(os.environ["RANK"])
         if config.multiprocessing_distributed:
             # For multiprocessing distributed training, rank needs to be the
@@ -90,7 +90,7 @@ def main_worker(gpu, ngpus_per_node, config):
         model = torch.nn.DataParallel(model).cuda()
 
     train_dataset = SEMDepthDataset(data_path=config.data.train_path)
-    valid_dataset = SEMDepthDataset(data_path=config.data.validation_path)
+    valid_dataset = SEMDepthDataset(data_path=config.data.valid_path)
 
     if config.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
@@ -142,7 +142,7 @@ def main_worker(gpu, ngpus_per_node, config):
                 save_checkpoint(
                     {
                         "epoch": epoch + 1,
-                        "arch": config.model.arch,
+                        "arch": config.model.name,
                         "state_dict": model.module.state_dict(),
                         "optimizer": optimizer,
                     },
@@ -170,13 +170,13 @@ def train(model, train_loader, optimizer, scheduler, criterion, epoch, gpu_rank)
         loss.backward()
         optimizer.step()
         avg_loss.append(loss.detach().item())
-        rmse = calculate_rmse(depth, otuput)
+        rmse = calculate_rmse(depth, output)
         avg_rmse.append(rmse.detach().item())
-        train_info_dict['loss'] = np.average(avg_ce_loss)
-        train_info_dict['rmse'] = np.average(avg_accuracy)
+        train_info_dict['loss'] = np.average(avg_loss)
+        train_info_dict['rmse'] = np.average(avg_rmse)
         train_loader.set_postfix(train_info_dict)
     scheduler.step()
-    return np.average(avg_accuracy), np.average(avg_ce_loss)
+    return np.average(avg_rmse), np.average(avg_loss)
 
 
 def valid(model, valid_loader, criterion, epoch):
@@ -193,11 +193,11 @@ def valid(model, valid_loader, criterion, epoch):
         loss = criterion(output, depth)
         avg_loss.append(loss.detach().item())
         rmse = calculate_rmse(output, depth)
-        avg_rmse.append(rmse)
+        avg_rmse.append(rmse.detach().item())
         valid_info_dict['loss'] = np.average(avg_loss)
         valid_info_dict['rmse'] = np.average(avg_rmse)
         valid_loader.set_postfix(valid_info_dict)
-    return np.average(avg_accuracy), np.average(avg_loss)
+    return np.average(avg_rmse), np.average(avg_loss)
 
 
 if __name__ == '__main__':
