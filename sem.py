@@ -39,15 +39,6 @@ class SEMDepthDataset(Dataset):
         depth = self.depth_dict[key]
         return sem, depth
 
-    def random_flip(self, sem):
-        if np.random.rand() > 0.5:
-            sem = T.RandomHorizontalFlip(p=1).forward(sem)
-
-        if np.random.rand() > 0.5:
-            sem = T.RandomVerticalFlip(p=1).forward(sem)
-
-        return sem
-
 
 if __name__ == '__main__':
     dataset = SEMDepthDataset(data_path='./data/Train')
