@@ -22,8 +22,10 @@ class SEMDepthDataset(Dataset):
     def __getitem__(self, idx):
         sem, depth = self.get_sem_and_depth(idx)
         if self.transforms:
-            sem, depth = self.random_flip(sem, depth) # added
-            #sem = self.augmentation(sem) # raises error
+            sem = self.random_flip(sem) # changed
+            #sem = self.augmentation(sem)
+            sem = sem.squeeze() # added
+            depth = depth.squeeze() # added
         return sem, depth
 
     def __len__(self):
@@ -46,23 +48,15 @@ class SEMDepthDataset(Dataset):
         return sem, depth
 
     
-    # added method
-    def random_flip(self, sem, depth):
-        h_flip = torch.nn.Sequential(
-            T.RandomHorizontalFlip(p=1)
-        )
-        v_flip = torch.nn.Sequential(
-            T.RandomVerticalFlip(p=1)
-        )
+    # changed method
+    def random_flip(self, sem):
         if np.random.rand() > 0.5:
-            sem = h_flip(sem)
-            depth = h_flip(depth)
-
+            sem = T.RandomHorizontalFlip(p=1).forward(sem)
+    
         if np.random.rand() > 0.5:
-            sem = v_flip(sem)
-            depth = v_flip(depth)
+            sem = T.RandomVerticalFlip(p=1).forward(sem)
 
-        return sem, depth
+        return sem
 
 
 
@@ -72,4 +66,5 @@ if __name__ == '__main__':
     loader = DataLoader(dataset)
     loader_iter = iter(loader)
     sem, depth = next(loader_iter)
+    
     print(f'sem:{sem.shape} depth:{depth.shape}')
