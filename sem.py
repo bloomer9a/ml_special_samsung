@@ -4,6 +4,7 @@ import torch
 import torchvision.transforms as T
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
+import numpy as np
 
 
 class SEMDepthDataset(Dataset):
@@ -21,7 +22,10 @@ class SEMDepthDataset(Dataset):
     def __getitem__(self, idx):
         sem, depth = self.get_sem_and_depth(idx)
         if self.transforms:
-            sem = self.augmentation(sem)
+            sem = self.random_flip(sem) # changed
+            #sem = self.augmentation(sem)
+            sem = sem.squeeze() # added
+            depth = depth.squeeze() # added
         return sem, depth
 
     def __len__(self):
@@ -43,29 +47,24 @@ class SEMDepthDataset(Dataset):
         depth = self.depth_dict[key]
         return sem, depth
 
-
-class RandomFlip(object):
-    def __call__(self, data):
-        label, input = data['label'], data['input']
-
+    
+    # changed method
+    def random_flip(self, sem):
         if np.random.rand() > 0.5:
-            label = np.fliplr(label)
-            input = np.fliplr(input)
-
+            sem = T.RandomHorizontalFlip(p=1).forward(sem)
+    
         if np.random.rand() > 0.5:
-            label = np.flipud(label)
-            input = np.flipud(input)
+            sem = T.RandomVerticalFlip(p=1).forward(sem)
 
-        data = {'label': label, 'input': input}
-
-        return data
+        return sem
 
 
 
 
 if __name__ == '__main__':
-    dataset = SEMDepthDataset(data_path='./data/Train')
+    dataset = SEMDepthDataset(data_path='./data/Train', transforms=True) # changed argument 
     loader = DataLoader(dataset)
     loader_iter = iter(loader)
     sem, depth = next(loader_iter)
+    
     print(f'sem:{sem.shape} depth:{depth.shape}')
