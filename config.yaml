@@ -1,0 +1,30 @@
+model:
+  name: 'unet'
+  resume: False
+  resume_path: None
+train:
+  seed: 421
+  batch_size: 256
+  epoch: 101
+  workers: 4
+  criterion: 'l1'
+optimizer:
+  learning_rate: 0.0001
+log:
+  use_wandb: False
+  project_name: 'SEM_Depth_Estimation'
+  display_name: ''
+  base_path: "/workspace/discrete_speech_representation/output"
+ddp:
+  using_gpus: 3
+  dist_backend: "nccl"
+  dist_url: "env://"
+  master_addr: "127.0.0.1"
+  master_port: "81591"
+  gpu_num: "8,9"
+  world_size: 1
+  rank: 0
+data:
+  train_path: '/workspace/project/ml_special_samsung/data/Train'
+  valid_path: '/workspace/project/ml_special_samsung/data/Validation'
+  test_path: '/workspace/project/ml_special_samsung/data/Test'
