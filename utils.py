@@ -19,8 +19,8 @@ def calculate_rmse(yhat, y):
 
 def setup_model(config):
     if config.model.name == 'unet':
-        from models.unet import Unet
-        model = Unet()
+        from models.unet import UNet
+        model = UNet()
         return model
     else:
         Exception("InvalidModelError: you must choose a valid model to train")
