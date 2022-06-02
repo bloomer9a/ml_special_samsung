@@ -15,15 +15,11 @@ class SEMDepthDataset(Dataset):
         self.sem_list = [f for f in os.listdir(self.sem_path) if f.endswith('.png')]
         self.depth_dict = self.get_depth_dict(depth_path)
         self.transforms = transforms
-        if self.transforms:
-            self.augmentation = torch.nn.Sequential(
-                T.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
-            )
 
     def __getitem__(self, idx):
         sem, depth = self.get_sem_and_depth(idx)
         if self.transforms:
-            sem = self.augmentation(sem)
+            sem = self.random_flip(sem)
         return sem, depth
 
     def __len__(self):
@@ -44,6 +40,15 @@ class SEMDepthDataset(Dataset):
         sem = T.ToTensor()(Image.open(os.path.join(self.sem_path, sem_file)))
         depth = self.depth_dict[key]
         return sem, depth
+
+    def random_flip(self, sem):
+        if np.random.rand() > 0.5:
+            sem = T.RandomHorizontalFlip(p=1).forward(sem)
+
+        if np.random.rand() > 0.5:
+            sem = T.RandomVerticalFlip(p=1).forward(sem)
+
+        return sem
 
 
 
