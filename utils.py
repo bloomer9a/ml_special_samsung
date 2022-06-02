@@ -7,20 +7,22 @@ import torch.optim as optim
 class RMSE(nn.Module):
     def __init__(self):
         super(RMSE, self).__init__()
-        self.mse = nn.MSELoss()
+        self.mse = nn.MSELoss(reduction='sum')
 
     def forward(self, yhat, y):
-        return torch.sqrt(self.mse(yhat, y))
+        batch_size = yhat.size(0)
+        return torch.sqrt(self.mse(yhat, y) / batch_size)
 
 
 def calculate_rmse(yhat, y):
-    return torch.sqrt(torch.mean(y - yhat) ** 2)
+    rmse = RMSE()
+    return rmse(yhat, y)
 
 
 def setup_model(config):
     if config.model.name == 'unet':
-        from models.unet import Unet
-        model = Unet()
+        from models.unet import UNet
+        model = UNet()
         return model
     else:
         Exception("InvalidModelError: you must choose a valid model to train")
