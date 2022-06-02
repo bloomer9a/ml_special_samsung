@@ -5,6 +5,8 @@ import torchvision.transforms as T
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 
+import numpy as np
+
 
 class SEMDepthDataset(Dataset):
     def __init__(self, data_path, transforms=False):
@@ -47,6 +49,10 @@ class SEMDepthDataset(Dataset):
             sem = T.RandomVerticalFlip(p=1).forward(sem)
 
         return sem
+
+
+
+
 
 
 if __name__ == '__main__':
