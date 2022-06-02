@@ -52,21 +52,7 @@ class SEMDepthDataset(Dataset):
 
 
 
-class RandomFlip(object):
-    def __call__(self, data):
-        label, input = data['label'], data['input']
 
-        if np.random.rand() > 0.5:
-            label = np.fliplr(label)
-            input = np.fliplr(input)
-
-        if np.random.rand() > 0.5:
-            label = np.flipud(label)
-            input = np.flipud(input)
-
-        data = {'label': label, 'input': input}
-
-        return data
 
 
 if __name__ == '__main__':
