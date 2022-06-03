@@ -8,13 +8,18 @@ train:
   epoch: 101
   workers: 4
   criterion: 'l1'
+test:
+  batch_size: 1
+  workers: 4
+  ckpt_file: 'output/ckpt/unet/unet_best.pth.tar'
 optimizer:
   learning_rate: 0.0001
 log:
-  use_wandb: False
+  use_wandb: True
   project_name: 'SEM_Depth_Estimation'
   display_name: ''
-  base_path: "/workspace/discrete_speech_representation/output"
+  base_path: "output"
+  infer_path: "output/inference/unet"
 ddp:
   using_gpus: 3
   dist_backend: "nccl"
@@ -25,6 +30,9 @@ ddp:
   world_size: 1
   rank: 0
 data:
-  train_path: '/workspace/project/ml_special_samsung/data/Train'
-  valid_path: '/workspace/project/ml_special_samsung/data/Validation'
-  test_path: '/workspace/project/ml_special_samsung/data/Test'
+  train_path: 'data/Train'
+  valid_path: 'data/Validation'
+  test_path: 'data/Test'
+  #train_path: '/workspace/project/ml_special_samsung/data/Train'
+  #valid_path: '/workspace/project/ml_special_samsung/data/Validation'
+  #test_path: '/workspace/project/ml_special_samsung/data/Test'
