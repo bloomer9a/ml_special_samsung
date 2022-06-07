@@ -9,20 +9,25 @@ import numpy as np
 
 
 class SEMDepthDataset(Dataset):
-    def __init__(self, data_path, transforms=False):
-        depth_path = os.path.join(data_path, 'Depth')
+    def __init__(self, data_path, transforms=False, train=True):
         self.sem_path = os.path.join(data_path, 'SEM')
         self.sem_list = [f for f in os.listdir(self.sem_path) if f.endswith('.png')]
-        self.depth_dict = self.get_depth_dict(depth_path)
-        self.transforms = transforms
+        self.train = train        
+        if train:
+            depth_path = os.path.join(data_path, 'Depth')
+            self.depth_dict = self.get_depth_dict(depth_path)
+            self.transforms = transforms
 
     def __getitem__(self, idx):
-        sem, depth = self.get_sem_and_depth(idx)
-        sem_file = self.sem_list[idx]
-        if self.transforms:
-            sem = self.random_flip(sem)
+        sem = self.get_sem(idx)
+        key = self.get_key(idx)
+        if self.train:
+            depth = self.get_depth(key)
+            if self.transforms:
+                sem = self.random_flip(sem)
+            return sem, depth
         
-        return sem, depth
+        return sem, key
 
     def __len__(self):
         return len(self.sem_list)
@@ -36,13 +41,20 @@ class SEMDepthDataset(Dataset):
 
         return depth_file_dict
 
-    def get_sem_and_depth(self, idx):
+    def get_depth(self, key):
+        depth = self.depth_dict[key]
+        return depth
+
+    def get_sem(self, idx):
+        sem_file = self.sem_list[idx]
+        sem = T.ToTensor()(Image.open(os.path.join(self.sem_path, sem_file)))
+        return sem
+
+    def get_key(self, idx):
         sem_file = self.sem_list[idx]
         key = sem_file.split('_itr')[0]
-        sem = T.ToTensor()(Image.open(os.path.join(self.sem_path, sem_file)))
-        depth = self.depth_dict[key]
-        return sem, depth
-
+        return key
+    
     def random_flip(self, sem):
         if np.random.rand() > 0.5:
             sem = T.RandomHorizontalFlip(p=1).forward(sem)
@@ -54,40 +66,21 @@ class SEMDepthDataset(Dataset):
 
 
 
-class SEMDataset(Dataset):
-    def __init__(self, data_path):
-        self.sem_path = os.path.join(data_path, 'SEM')
-        self.sem_list = [f for f in os.listdir(self.sem_path) if f.endswith('.png')]
-
-
-    def __getitem__(self, idx):
-        sem = self.get_sem(idx)
-        sem_file = self.sem_list[idx]
-        key = self.get_key(idx)
-        return sem, key
-
-    def __len__(self):
-        return len(self.sem_list)
-
-
-    def get_sem(self, idx):
-        sem_file = self.sem_list[idx]
-        # key = sem_file.split('_itr')[0]
-        sem = T.ToTensor()(Image.open(os.path.join(self.sem_path, sem_file)))
-        return sem
-    
-    def get_key(self, idx):
-        sem_file = self.sem_list[idx]
-        key = sem_file.split('_itr')[0]
-        return key
-
 
 
 
 if __name__ == '__main__':
-    #dataset = SEMDepthDataset(data_path='./data/Train')
-    dataset = SEMDataset(data_path='./data/Test')
-    loader = DataLoader(dataset)
+    test_dataset = SEMDepthDataset(data_path='./data/Test', train=False)
+    loader = DataLoader(test_dataset)
     loader_iter = iter(loader)
-    sem = next(loader_iter)
+    sem, key = next(loader_iter)
     print(f'sem:{sem.shape}')
+    #print(f'key:{key.shape}')
+
+    train_dataset = SEMDepthDataset(data_path='./data/Train', train=True)
+    loader = DataLoader(train_dataset)
+    loader_iter = iter(loader)
+    sem, depth = next(loader_iter)
+    print(f'sem:{sem.shape}')
+    print(f'depth:{depth.shape}')
+

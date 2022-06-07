@@ -18,7 +18,22 @@ from sem2 import SEMDataset
 from utils import prepare_inference, save_output, load_weights
 
 
-def main(config):
+def inference(model, test_loader, config):
+    test_loader = tqdm(test_loader, desc=f"Test")
+
+    for step, data in enumerate(test_loader):
+        model.eval()
+        sem, key = data
+        sem = sem.cuda()
+        output = model(sem)
+        if (step + 1) % 100 == 0:
+            path = config.log.infer_path
+            save_output(output, key, path)
+            print(f'{step + 1}th infer saved')
+
+
+
+def inference_driver(config):
     
     # Setting up model for inference
     model = prepare_inference(config)
@@ -42,27 +57,10 @@ def main(config):
     
 
 
-def inference(model, test_loader, config):
-    test_loader = tqdm(test_loader, desc=f"Test")
-    i = 1
-    for step, data in enumerate(test_loader):
-        model.eval()
-        sem, key = data
-        sem = sem.cuda()
-        output = model(sem)
-        if i % 100 == 0:
-            path = config.log.infer_path
-            save_output(output, key, path)
-            print(f'{i}th infer saved')
-        i += 1
-
-
-
-
 if __name__ == '__main__':
 
     config = OmegaConf.load("config.yaml")
     config.merge_with_cli()
 
-    main(config)
+    inference_driver(config)
 
