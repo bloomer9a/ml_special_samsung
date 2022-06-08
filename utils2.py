@@ -106,54 +106,6 @@ def save_output(output, key, path):
 
 def load_weights(checkpoint_path):
     state_dict = torch.load(checkpoint_path, map_location='cpu')['state_dict']
-    if from_parallel(state_dict):
-        state_dict = unwrap_parallel(state_dict)
 
     return state_dict
 
-
-def set_device(x, use_cpu=True):
-    multi_gpu = False 
-
-    # When input is tensor 
-    if isinstance(x, torch.Tensor): 
-        if use_cpu:
-            x = x.cpu()
-
-     # When input is model
-    elif isinstance(x, nn.Module): 
-        if use_cpu:
-            x.cpu()
-        else:
-            torch.cuda.set_device(device[0])
-            if multi_gpu:
-                x = nn.DataParallel(x, device_ids=device).cuda()
-            else: 
-                x.cuda(device[0])
-    # When input is tuple 
-    elif type(x) is tuple or type(x) is list:
-        x = list(x)
-        for i in range(len(x)):
-            x[i] = set_device(x[i], device, use_cpu)
-        x = tuple(x) 
-
-    return x 
-
-
-
-def from_parallel(state_dict):
-    from_parallel = False
-    for key, _ in state_dict.items():
-        if key.find('module.') != -1:
-            from_parallel = True
-            break 
-
-    return from_parallel
-
-def unwrap_parallel(state_dict):
-    new_state_dict = {}
-    for key, value in state_dict.items():
-        new_key = key.replace('module.', '')
-        new_state_dict[new_key] = value
-
-    return new_state_dict

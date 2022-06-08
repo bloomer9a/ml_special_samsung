@@ -14,13 +14,13 @@ from omegaconf import OmegaConf
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
-from sem2 import SEMDataset
-from utils import prepare_inference, save_output, load_weights
+from sem2 import SEMDepthDataset
+from utils2 import prepare_inference, save_output, load_weights
 
 
 def inference(model, test_loader, config):
     test_loader = tqdm(test_loader, desc=f"Test")
-
+    
     for step, data in enumerate(test_loader):
         model.eval()
         sem, key = data
@@ -40,7 +40,7 @@ def inference_driver(config):
     model.load_state_dict(load_weights(config.test.ckpt_file))
     model.cuda()
     
-    test_dataset = SEMDataset(data_path=config.data.test_path)
+    test_dataset = SEMDepthDataset(data_path=config.data.test_path, train=False)
 
     test_sampler = None
 
@@ -59,7 +59,7 @@ def inference_driver(config):
 
 if __name__ == '__main__':
 
-    config = OmegaConf.load("config.yaml")
+    config = OmegaConf.load("config2.yaml")
     config.merge_with_cli()
 
     inference_driver(config)
