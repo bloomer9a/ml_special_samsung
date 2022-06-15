@@ -92,6 +92,11 @@ def main_worker(gpu, ngpus_per_node, config):
     train_dataset = SEMDepthDataset(data_path=config.data.train_path)
     valid_dataset = SEMDepthDataset(data_path=config.data.valid_path)
 
+    if config.model.name == 'liif':
+        from wrapper import ImplicitDataset
+        train_dataset = ImplicitDataset(dataset=train_dataset)
+        valid_dataset = ImplicitDataset(dataset=valid_dataset)
+
     if config.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
     else:
@@ -116,15 +121,16 @@ def main_worker(gpu, ngpus_per_node, config):
     if config.log.use_wandb and dist.get_rank() == 0:
         wandb.init(
             project=config.log.project_name,
-            name=config.model.arch + config.log.display_name,
+            name=config.model.name + config.log.display_name,
             config=OmegaConf.to_container(config),
         )
         os.makedirs(ckpt_path, exist_ok=True)
     best_rmse = 0
     for epoch in range(start_epoch, last_epoch):
-        train_rmse, train_loss = train(model, train_loader, optimizer, scheduler, criterion, epoch, dist.get_rank())
+        train_rmse, train_loss = train(config, model, train_loader, optimizer, scheduler, criterion, epoch,
+                                       dist.get_rank())
         print(f'Epoch: {epoch} Avg RMSE: {train_rmse} Avg Train Loss: {train_loss}')
-        valid_rmse, valid_loss = valid(model, valid_loader, criterion, epoch)
+        valid_rmse, valid_loss = valid(config, model, valid_loader, criterion, epoch)
         print(f'Epoch: {epoch} Avg RMSE: {valid_rmse} Avg Valid Loss: {valid_loss}')
         if dist.get_rank() == 0:
             if config.log.use_wandb == True:
@@ -151,10 +157,12 @@ def main_worker(gpu, ngpus_per_node, config):
                     epoch=epoch,
                     path=ckpt_path
                 )
+
+
 #                print(f'{config.model.name}_e{epoch:03d} has been successfully saved')
+        print(f'best rmse is {best_rmse}')
 
-
-def train(model, train_loader, optimizer, scheduler, criterion, epoch, gpu_rank):
+def train(config, model, train_loader, optimizer, scheduler, criterion, epoch, gpu_rank):
     avg_rmse = []
     avg_loss = []
     train_info_dict = dict()
@@ -162,10 +170,19 @@ def train(model, train_loader, optimizer, scheduler, criterion, epoch, gpu_rank)
     for step, data in enumerate(train_loader):
         model.train()
         optimizer.zero_grad()
-        sem, depth = data
-        sem = sem.cuda()
-        depth = depth.cuda()
-        output = model(sem)
+        if config.model.name == 'liif':
+            sem, depth, coord = data
+            batch, channel, width, height = sem.shape
+            sem = sem.cuda()
+            depth = depth.cuda()
+            coord = coord.cuda()
+            output = model(sem, coord)
+            output = output.view(batch, channel, width, height)
+        else:
+            sem, depth = data
+            sem = sem.cuda()
+            depth = depth.cuda()
+            output = model(sem)
         loss = criterion(output, depth)
         loss.backward()
         optimizer.step()
@@ -179,17 +196,26 @@ def train(model, train_loader, optimizer, scheduler, criterion, epoch, gpu_rank)
     return np.average(avg_rmse), np.average(avg_loss)
 
 
-def valid(model, valid_loader, criterion, epoch):
+def valid(config, model, valid_loader, criterion, epoch):
     avg_rmse = []
     avg_loss = []
     valid_info_dict = dict()
     valid_loader = tqdm(valid_loader, desc=f"Valid)[{epoch:03d}]")
     for step, data in enumerate(valid_loader):
         model.eval()
-        sem, depth = data
-        sem = sem.cuda()
-        depth = depth.cuda()
-        output = model(sem)
+        if config.model.name == 'liif':
+            sem, depth, coord = data
+            batch, channel, width, height = sem.shape
+            sem = sem.cuda()
+            depth = depth.cuda()
+            coord = coord.cuda()
+            output = model(sem, coord)
+            output = output.view(batch, channel, width, height)
+        else:
+            sem, depth = data
+            sem = sem.cuda()
+            depth = depth.cuda()
+            output = model(sem)
         loss = criterion(output, depth)
         avg_loss.append(loss.detach().item())
         rmse = calculate_rmse(output, depth)
