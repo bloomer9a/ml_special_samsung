@@ -1,19 +1,25 @@
 import torch
-import numpy as np 
+import numpy as np
 from torch.utils.data import Dataset
 
-class ImplicitDataset(Dataset):
 
-    def __init__(self, dataset):
+class ImplicitDataset(Dataset):
+    def __init__(self, dataset, train=True):
         self.dataset = dataset
+        self.train = train
 
     def __len__(self):
         return len(self.dataset)
 
     def __getitem__(self, idx):
-        sem, depth = self.dataset[idx]
-        coord = self.to_pixel_samples(sem.contiguous())
-        return sem, depth, coord
+        if self.train:
+            sem, depth = self.dataset[idx]
+            coord = self.to_pixel_samples(sem.contiguous())
+            return sem, depth, coord
+        else:
+            sem, key = self.dataset[idx]
+            coord = self.to_pixel_samples(sem.contiguous())
+            return sem, key, coord
 
     def make_coord(self, shape, ranges=None, flatten=True):
         """ Make coordinates at grid centers.
@@ -38,5 +44,3 @@ class ImplicitDataset(Dataset):
         """
         coord = self.make_coord(img.shape[-2:])
         return coord
-
-

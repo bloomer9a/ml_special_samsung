@@ -14,7 +14,9 @@ log:
   use_wandb: False
   project_name: 'SEM_Depth_Estimation'
   display_name: ''
-  base_path: "/workspace/discrete_speech_representation/output"
+  base_path: "./output"
+  ckpt_path: './output/ckpt/liif_base_unet_encoder_rmse/liif_best.pth.tar'
+  output_path: './output/inference/test_liif_base_unet_encoder_rmse/'
 ddp:
   using_gpus: 3
   dist_backend: "nccl"

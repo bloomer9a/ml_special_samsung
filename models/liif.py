@@ -4,7 +4,6 @@ import torch.nn.functional as F
 
 from utils import make_coord
 from models.unet import UNet
-from models.encoder import Encoder
 from models.mlp import MLP
 
 
@@ -16,7 +15,7 @@ class LIIF(nn.Module):
         self.feat_unfold = feat_unfold
         self.cell_decode = cell_decode
 
-        self.encoder = UNet()
+        self.encoder = UNet(liif=True)
         imnet_in_dim = 64
         if self.feat_unfold:
             imnet_in_dim *= 9

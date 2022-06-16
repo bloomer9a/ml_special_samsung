@@ -6,7 +6,7 @@ import torch.nn as nn
 
 
 class UNet(nn.Module):
-    def __init__(self, liif=True):
+    def __init__(self, liif=False):
         super(UNet, self).__init__()
 
         self.liif = liif

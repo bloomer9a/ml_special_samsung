@@ -1,26 +1,32 @@
 import os
 import glob
+import numpy as np
 import torch
 import torchvision.transforms as T
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 
-import numpy as np
-
 
 class SEMDepthDataset(Dataset):
-    def __init__(self, data_path, transforms=False):
-        depth_path = os.path.join(data_path, 'Depth')
+    def __init__(self, data_path, transforms=False, train=True):
         self.sem_path = os.path.join(data_path, 'SEM')
         self.sem_list = [f for f in os.listdir(self.sem_path) if f.endswith('.png')]
-        self.depth_dict = self.get_depth_dict(depth_path)
-        self.transforms = transforms
+        self.train = train
+        if train:
+            depth_path = os.path.join(data_path, 'Depth')
+            self.depth_dict = self.get_depth_dict(depth_path)
+            self.transforms = transforms
 
     def __getitem__(self, idx):
-        sem, depth = self.get_sem_and_depth(idx)
-        if self.transforms:
-            sem = self.random_flip(sem)
-        return sem, depth
+        sem = self.get_sem(idx)
+        key = self.get_key(idx)
+        if self.train:
+            depth = self.get_depth(key)
+            if self.transforms:
+                sem = self.random_flip(sem)
+            return sem, depth
+
+        return sem, key
 
     def __len__(self):
         return len(self.sem_list)
@@ -34,12 +40,19 @@ class SEMDepthDataset(Dataset):
 
         return depth_file_dict
 
-    def get_sem_and_depth(self, idx):
-        sem_file = self.sem_list[idx]
-        key = sem_file.split('_itr')[0]
-        sem = T.ToTensor()(Image.open(os.path.join(self.sem_path, sem_file)))
+    def get_depth(self, key):
+        key = key.split('_itr')[0]
         depth = self.depth_dict[key]
-        return sem, depth
+        return depth
+
+    def get_sem(self, idx):
+        sem_file = self.sem_list[idx]
+        sem = T.ToTensor()(Image.open(os.path.join(self.sem_path, sem_file)))
+        return sem
+
+    def get_key(self, idx):
+        sem_file = self.sem_list[idx]
+        return sem_file
 
     def random_flip(self, sem):
         if np.random.rand() > 0.5:
@@ -49,15 +62,3 @@ class SEMDepthDataset(Dataset):
             sem = T.RandomVerticalFlip(p=1).forward(sem)
 
         return sem
-
-
-
-
-
-
-if __name__ == '__main__':
-    dataset = SEMDepthDataset(data_path='./data/Train')
-    loader = DataLoader(dataset)
-    loader_iter = iter(loader)
-    sem, depth = next(loader_iter)
-    print(f'sem:{sem.shape} depth:{depth.shape}')
